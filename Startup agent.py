@@ -3,7 +3,8 @@ __author__ = 'Yotam'
 from time import localtime
 import ctypes
 from tkinter import filedialog, Tk
-import os
+import subprocess
+
 
 def database_starter():
     try:
@@ -17,41 +18,49 @@ def database_starter():
         database.seek(0)
         return False, len(list(database))
 
+
 def program_loader(program):
     database = open('database.dat', 'r+')
-    paths = list(database)
-    status = os.spawnlp('P_WAIT', paths[program-1].split('? ?')[1])
+    to_load = list(database)[program].split('$$')
+    status = subprocess.Popen(['\"' + to_load[1] + '\"', to_load[2]])
     return status
 
-def answeryn(text):
+
+def askyn(text):
     while True:
         yn = input(text)
-        if yn == 'y': return True
-        elif yn == 'n': return False
-        else: print('I didn\'t understand')
+        if yn == 'y':
+            return True
+        elif yn == 'n':
+            return False
+        else:
+            print('I didn\'t understand')
+
 
 def add_program():
     database = open('database.dat', 'r+')
-    database.seek(-1)
+    database.read()
     Tk().withdraw()
-    filepath = filedialog.askopenfilename() # show an "Open" dialog box and return the path to the selected file
+    filepath = filedialog.askopenfilename()  # show an "Open" dialog box and return the path to the selected file
+    filelst = filepath.split('/')
     assert filepath.split('/')[-1].split('.')[-1] == 'exe'
-    num = database.write(filepath.split('/')[-1].split('.')[0] + '? ?' + filepath + '\n')
+    num = database.write(filelst[-1].split('.')[0] + '$$' + '/'.join(filelst[:-1]) +'$$' +filelst[-1])
     database.flush()
     database.seek(0)
     n = len(list(database))
     database.close()
     return n
 
+
 def display_programs():
     database = open('database.dat', 'r+')
     paths = list(database)
     for i in range(len(paths)):
-        print(str(i+1) + '. ' + paths[i].split('? ?')[0])
+        print(str(i + 1) + '. ' + paths[i].split('$$')[0])
     database.close()
 
-def main():
 
+def main():
     new = False
     new, size = database_starter()
 
@@ -60,7 +69,7 @@ def main():
         print('It seems that this is your first time using my services. please add your first program:')
         while more:
             size = add_program()
-            more = answeryn('Would you like to add another program? y/n')
+            more = askyn('Would you like to add another program? y/n')
 
 
     else:
@@ -75,32 +84,31 @@ def main():
             print('Good evening sir. What would you like to do?')
 
     display_programs()
-    newprog = answeryn("Would you like to add another program? y/n")
+    newprog = askyn("Would you like to add another program? y/n")
     while newprog:
         size = add_program()
         print('New options:')
         display_programs()
-        newprog = answeryn('Would you like to add another? y/n')
+        newprog = askyn('Would you like to add another? y/n')
 
     while True:
         prognum = input("Enter program number:")
         try:
-            program = int(prognum)
+            program = int(prognum)-1
         except TypeError:
             print('Invalid program number.')
             continue
-        print(program)
-        print(size)
-        if program > 0 and program < size:
+        if -1 < program < size:
             break
         print('Invalid program number.')
     status = program_loader(program)
 
     if status != 0:
-        restart = answeryn('Is everything alright sir? would you like to restart that program? y/n')
+        restart = askyn('Is everything alright sir? would you like to restart that program? y/n')
         if restart:
             status = program_loader(program)
 
     print('Well sir, have a good day! Hope to see you soon.')
+
 
 main()
